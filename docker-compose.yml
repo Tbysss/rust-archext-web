@@ -1,0 +1,16 @@
+version: "3"
+
+#volumes:
+#  archive:
+#  data:
+
+services:
+  extractor:
+    image: extractor:latest
+    environment:
+      - RUST_LOG="debug"
+    build:
+      context: extractor
+    volumes:
+      - ./archive:/archive
+      - ./data:/data

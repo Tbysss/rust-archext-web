@@ -1,5 +1,6 @@
 mod extract;
 
+use crate::extract::Extract;
 use chrono::Local;
 use env_logger::Builder;
 use extract::Extractor;
@@ -7,14 +8,13 @@ use futures::{
     channel::mpsc::{channel, Receiver},
     SinkExt, StreamExt,
 };
+use glob::glob;
 use log::LevelFilter;
 use log::{debug, error, info};
 use notify::EventKind;
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Result, Watcher};
-use std::io::Write;
-use std::path::Path;
-use glob::glob;
-use crate::extract::Extract;
+use std::{io::Write, path::PathBuf};
+use std::{path::Path, process::Command};
 
 fn main() {
     Builder::new()
@@ -27,7 +27,7 @@ fn main() {
                 record.args()
             )
         })
-        .filter(None, LevelFilter::Info)
+        .filter(None, LevelFilter::Debug)
         .init();
 
     let path = std::env::args()
@@ -36,9 +36,13 @@ fn main() {
     let target_dir = std::env::args()
         .nth(2)
         .expect("Argument 2 needs to be a path (target)");
-    let extractor = extract::Extractor::new(target_dir.as_str());
+    let archive_dir = std::env::args()
+        .nth(3)
+        .expect("Argument 3 needs to be a path (archive)");
+    let extractor = extract::Extractor::new(target_dir.as_str(), &archive_dir.as_str());
     info!("watching {}", path);
-    info!("output to: {:?}", extractor.target_path());
+    info!("output to: {:?}", extractor.target_path);
+    info!("archive to: {:?}", extractor.archive_dir);
 
     futures::executor::block_on(async {
         if let Err(e) = async_watch(path, &extractor).await {
@@ -94,8 +98,10 @@ fn on_change(extractor: &Extractor, res: Result<notify::Event>) {
                             Ok(path) => {
                                 info!("found a zip inside zip: {:?}", path);
                                 // zip inside zip -> redo extract
-                                extractor.extract(&path, Some(&file_path));
-                            },
+                                if extractor.extract(&path, Some(&file_path)) {
+                                    archive(extractor, &path);
+                                }
+                            }
                             Err(e) => println!("{:?}", e),
                         }
                     }
@@ -115,10 +121,24 @@ fn on_change(extractor: &Extractor, res: Result<notify::Event>) {
                             notify::event::RenameMode::To,
                         ))
                 {
-                    extractor.extract(file_path, None);
+                    if extractor.extract(file_path, None) {
+                        archive(extractor, file_path);
+                    }
                 }
             }
         }
-        Err(e) => error!("watch error: {:?}", e),
+        Err(e) => panic!("watch error: {:?}", e),
     }
+}
+
+fn archive(extractor: &Extractor, file_path: &PathBuf) {
+    let mut archive_path = PathBuf::new();
+    archive_path.push(&extractor.archive_dir);
+    archive_path.push(file_path.file_name().unwrap());
+    info!("{:?}: archive to {:?}", file_path, archive_path);
+    Command::new("mv")
+        .arg(file_path.as_os_str())
+        .arg(archive_path.as_os_str())
+        .status()
+        .expect("failed to archive");
 }

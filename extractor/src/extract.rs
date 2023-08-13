@@ -3,18 +3,16 @@ use std::path::PathBuf;
 use zip_extensions::*;
 
 pub struct Extractor {
-    target_path: PathBuf
+    pub target_path: PathBuf,
+    pub archive_dir: PathBuf
 }
 
 impl Extractor {
-    pub fn new(target_path: &str) -> Extractor {
-        Extractor {
-            target_path: PathBuf::from(target_path)
+    pub fn new(target_path: &str, archive_dir: &str) -> Self {
+        Self {
+            target_path: PathBuf::from(target_path),
+            archive_dir: PathBuf::from(archive_dir)
         }
-    }
-
-    pub fn target_path(&self) -> &PathBuf {
-        return &self.target_path;
     }
 }
 
@@ -24,7 +22,8 @@ pub trait Extract {
 
 impl Extract for Extractor {
     fn extract(&self, file_path: &PathBuf, target_path: Option<&PathBuf>) -> bool {
-        log::info!("trying to extract '{:?}' to '{:?}'", file_path, target_path);
+        let t = target_path.unwrap_or_else(|| &self.target_path);
+        log::info!("trying to extract '{:?}' to '{:?}'", file_path, t);
         if let Some(name) = file_path.file_stem() {
             if file_path.extension().is_none() {
                 log::warn!(
@@ -42,7 +41,6 @@ impl Extract for Extractor {
             }
             if let Some(file_name) = file_path.file_name() {
                 log::info!("file '{:?}' written - running next steps", file_name);
-                let t = target_path.unwrap_or_else(|| &self.target_path);
                 let res = zip_extract(file_path, t);
                 match res {
                     Ok(_) => {
