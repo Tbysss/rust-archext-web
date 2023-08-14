@@ -1,0 +1,5 @@
+[default]
+limits.data-form = "4GiB"
+limits.file = "4GiB"
+template_dir = "templates/"
+temp_dir = "data"

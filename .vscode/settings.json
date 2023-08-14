@@ -1,0 +1,5 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "./webserver-axum/Cargo.toml"
+    ]
+}
