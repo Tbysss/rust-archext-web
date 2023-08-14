@@ -1,7 +1,7 @@
 window.onload = function() {
     document.getElementsByTagName('form')[0].addEventListener('submit', async e => {
-        try {
-        
+            e.preventDefault()
+
             const uploadFormData = new FormData(e.target)
             const filenames = uploadFormData.getAll('submission.file').map(v => v.name).join(', ')
             const uploadRequest = new XMLHttpRequest()
@@ -13,12 +13,13 @@ window.onload = function() {
                 document.getElementById("upload-submit").value = message
                 document.getElementById("upload-submit").disabled = true
             }
+
+            uploadRequest.onreadystatechange = () => {
+                if(uploadRequest.readyState == 4) {
+                    document.write(uploadRequest.response)
+                }
+            }
         
             uploadRequest.send(uploadFormData)
-        } catch (err) {
-            console.log("failed with: ", err.message)
-        } finally {
-            document.getElementById('upload-submit').value = 'Upload'
-        }
     })
 }
