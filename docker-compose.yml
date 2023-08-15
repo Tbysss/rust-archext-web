@@ -1,16 +1,24 @@
 version: "3"
 
-#volumes:
-#  archive:
-#  data:
+volumes:
+  archive:
+  data:
 
 services:
   extractor:
     image: extractor:latest
-    environment:
-      - RUST_LOG="debug"
     build:
       context: extractor
     volumes:
-      - ./archive:/archive
-      - ./data:/data
+      - archive:/archive
+      - data:/data
+
+  
+  uploadserver:
+    image: uploadserver:latest
+    build:
+      context: webserver-rocket
+    volumes:
+      - data:/data
+    ports:
+      - 8080:8000

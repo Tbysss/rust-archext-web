@@ -17,8 +17,8 @@ use std::{io::Write, path::PathBuf};
 use std::{path::Path, process::Command};
 
 fn main() {
-    Builder::new()
-        .format(|buf, record| {
+    let mut builder = Builder::new();
+    builder.format(|buf, record| {
             writeln!(
                 buf,
                 "{} [{}] - {}",
@@ -26,9 +26,13 @@ fn main() {
                 record.level(),
                 record.args()
             )
-        })
-        .filter(None, LevelFilter::Debug)
-        .init();
+        });
+    builder.filter_level(LevelFilter::Off);
+    let env = env_logger::Env::new().filter_or("LOG_LEVEL", "info").write_style_or("LOG_STYLE", "always");
+    builder.parse_env(env);
+    builder.target(env_logger::Target::Stdout);
+    builder.init();
+    
 
     let path = std::env::args()
         .nth(1)
