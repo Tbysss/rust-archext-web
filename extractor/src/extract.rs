@@ -22,7 +22,8 @@ pub trait Extract {
 
 impl Extract for Extractor {
     fn extract(&self, file_path: &PathBuf, target_path: Option<&PathBuf>) -> bool {
-        let t = target_path.unwrap_or_else(|| &self.target_path);
+        let default_target = self.target_path.join(file_path.file_stem().unwrap());
+        let t = target_path.unwrap_or_else(|| &default_target);
         log::info!("trying to extract '{:?}' to '{:?}'", file_path, t);
         if let Some(name) = file_path.file_stem() {
             if file_path.extension().is_none() {
