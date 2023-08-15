@@ -1,6 +1,11 @@
-use std::path::{Path, PathBuf};
+use std::{
+    fs::File,
+    path::{Path, PathBuf},
+};
 
-use zip_extensions::*;
+use zip::ZipArchive;
+use std::fs;
+use std::io;
 
 pub struct Extractor {
     pub target_path: PathBuf,
@@ -25,7 +30,8 @@ impl Extract for Extractor {
         let t = target_path
             .unwrap_or_else(|| &self.target_path)
             .canonicalize()
-            .expect("failed to canoicalize target path");
+            .expect("failed to canoicalize target path")
+            .join(file_path.file_stem().unwrap());
         log::info!("trying to extract '{:?}' to '{:?}'", file_path, t);
         if let Some(name) = file_path.file_stem() {
             if file_path.extension().is_none() {
@@ -44,7 +50,9 @@ impl Extract for Extractor {
             }
             if let Some(file_name) = file_path.file_name() {
                 log::info!("file '{:?}' written - running next steps", file_name);
-                let res = zip_extract(file_path, &t);
+                let file = File::open(file_path).expect("failed to open file");
+                let mut archive = zip::ZipArchive::new(file).expect("failed to create zip archive");
+                let res = archive.extract(t);
                 match res {
                     Ok(_) => {
                         log::info!("{:?}: archive extracted!", name);
