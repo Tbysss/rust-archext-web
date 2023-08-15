@@ -22,7 +22,11 @@ pub trait Extract {
 
 impl Extract for Extractor {
     fn extract(&self, file_path: &PathBuf, target_path: Option<&PathBuf>) -> bool {
-        let default_target = self.target_path.join(file_path.file_stem().unwrap());
+        let default_target = if self.target_path == self.archive_dir {
+            self.target_path.join(file_path.parent().unwrap())
+        } else {
+            self.target_path.clone()
+        };
         let t = target_path.unwrap_or_else(|| &default_target);
         log::info!("trying to extract '{:?}' to '{:?}'", file_path, t);
         if let Some(name) = file_path.file_stem() {
