@@ -13,7 +13,7 @@ use log::LevelFilter;
 use log::{debug, error, info};
 use notify::EventKind;
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Result, Watcher};
-use std::{io::Write, path::PathBuf};
+use std::{io::Write, path::{PathBuf, self}};
 use std::{path::Path, process::Command};
 
 fn main() {
@@ -125,7 +125,14 @@ fn on_change(extractor: &Extractor, res: Result<notify::Event>) {
                             notify::event::RenameMode::To,
                         ))
                 {
-                    if extractor.extract(file_path, None) {
+                    let full_path = std::fs::canonicalize(&extractor.target_path).expect("failed to canonicalize path");
+                    let target_path = if file_path.starts_with(full_path) {
+                        // target is source -> reclaim structure
+                        file_path.parent()
+                    } else {
+                        None
+                    };
+                    if extractor.extract(file_path, target_path) {
                         archive(extractor, file_path);
                     }
                 }

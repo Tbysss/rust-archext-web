@@ -1,33 +1,31 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use zip_extensions::*;
 
 pub struct Extractor {
     pub target_path: PathBuf,
-    pub archive_dir: PathBuf
+    pub archive_dir: PathBuf,
 }
 
 impl Extractor {
     pub fn new(target_path: &str, archive_dir: &str) -> Self {
         Self {
             target_path: PathBuf::from(target_path),
-            archive_dir: PathBuf::from(archive_dir)
+            archive_dir: PathBuf::from(archive_dir),
         }
     }
 }
 
 pub trait Extract {
-    fn extract(&self, file_path: &PathBuf, target_path: Option<&PathBuf>) -> bool;
+    fn extract(&self, file_path: &PathBuf, target_path: Option<&Path>) -> bool;
 }
 
 impl Extract for Extractor {
-    fn extract(&self, file_path: &PathBuf, target_path: Option<&PathBuf>) -> bool {
-        let default_target = if self.target_path == self.archive_dir {
-            self.target_path.join(file_path.parent().unwrap())
-        } else {
-            self.target_path.clone()
-        };
-        let t = target_path.unwrap_or_else(|| &default_target);
+    fn extract(&self, file_path: &PathBuf, target_path: Option<&Path>) -> bool {
+        let t = target_path
+            .unwrap_or_else(|| &self.target_path)
+            .canonicalize()
+            .expect("failed to canoicalize target path");
         log::info!("trying to extract '{:?}' to '{:?}'", file_path, t);
         if let Some(name) = file_path.file_stem() {
             if file_path.extension().is_none() {
@@ -46,7 +44,7 @@ impl Extract for Extractor {
             }
             if let Some(file_name) = file_path.file_name() {
                 log::info!("file '{:?}' written - running next steps", file_name);
-                let res = zip_extract(file_path, t);
+                let res = zip_extract(file_path, &t);
                 match res {
                     Ok(_) => {
                         log::info!("{:?}: archive extracted!", name);
