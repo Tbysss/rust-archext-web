@@ -3,10 +3,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use zip::ZipArchive;
-use std::fs;
-use std::io;
-
 pub struct Extractor {
     pub target_path: PathBuf,
     pub archive_dir: PathBuf,

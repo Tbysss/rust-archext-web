@@ -3,6 +3,7 @@ version: "3"
 volumes:
   archive:
   data:
+    external: true
 
 networks:
   proxy:
@@ -41,3 +42,14 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       - proxy
+
+  cleanup:
+    image: alpine:3.6
+    command: ["crond", "-f", "-d", "8"]
+    links:
+      - extractor
+    volumes:
+      - ./cronjobs:/etc/crontabs/root:ro
+      - data:/data
+      - archive:/archive
+

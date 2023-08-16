@@ -93,47 +93,38 @@ fn on_change(extractor: &Extractor, res: Result<notify::Event>) {
         Ok(event) => {
             debug!("event: {:?}", event);
             let file_path = &event.paths[0];
-            if event.kind.is_create() {
-                if event.kind == EventKind::Create(notify::event::CreateKind::Folder) {
-                    let folder_path = file_path.clone().into_os_string().into_string().unwrap();
+            if event.kind.is_modify() {
+                if event.kind == EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::From))
+                {                  
+                    // zip inside folder?
+                    let folder_path = file_path.parent().unwrap().to_str().expect("failed to turn path into str").to_owned();
                     let glob_pattern = folder_path + "/**/*.zip";
-                    for entry in glob(&glob_pattern).expect("Failed to read glob pattern") {
-                        match entry {
-                            Ok(path) => {
-                                info!("found a zip inside zip: {:?}", path);
-                                // zip inside zip -> redo extract
-                                if extractor.extract(&path, Some(&file_path)) {
+                    let mut newZip = true;
+                    while newZip {
+                        newZip = false;
+                        for entry in glob(&glob_pattern).expect("Failed to read glob pattern") {
+                            match entry {
+                                Ok(path) => {
+                                    info!("found a zip inside folder: {:?}", path);
+                                    
+                                    let full_path = std::fs::canonicalize(&extractor.target_path).expect("failed to canonicalize path");
+                                    let target_path = if path.starts_with(full_path) {
+                                        // target is source -> reclaim structure
+                                        path.parent()
+                                    } else {
+                                        None
+                                    };
+                                    // zip inside zip -> redo extract
+                                    if extractor.extract(&path, target_path) {
+                                        newZip = true;
+                                    } else {
+                                        error!("invalid zip");
+                                    }
                                     archive(extractor, &path);
                                 }
+                                Err(e) => println!("{:?}", e),
                             }
-                            Err(e) => println!("{:?}", e),
                         }
-                    }
-                } else {
-                    info!(
-                        "new file created...wait until its fully written: {:?}",
-                        event.paths
-                    );
-                }
-            } else if event.kind.is_access() || event.kind.is_modify() {
-                if event.kind
-                    == EventKind::Access(notify::event::AccessKind::Close(
-                        notify::event::AccessMode::Write,
-                    ))
-                    || event.kind
-                        == EventKind::Modify(notify::event::ModifyKind::Name(
-                            notify::event::RenameMode::To,
-                        ))
-                {
-                    let full_path = std::fs::canonicalize(&extractor.target_path).expect("failed to canonicalize path");
-                    let target_path = if file_path.starts_with(full_path) {
-                        // target is source -> reclaim structure
-                        file_path.parent()
-                    } else {
-                        None
-                    };
-                    if extractor.extract(file_path, target_path) {
-                        archive(extractor, file_path);
                     }
                 }
             }

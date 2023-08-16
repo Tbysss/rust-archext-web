@@ -13,6 +13,8 @@ use rocket_dyn_templates::Template;
 struct Submission<'v> {
     #[field(validate = len(1..))]
     project: &'v str,
+    #[field(validate = len(1..))]
+    gate: &'v str,
     #[field(validate = ext(ContentType::ZIP))]
     file: TempFile<'v>,
 }
@@ -44,12 +46,13 @@ fn submit<'r>(form: Form<Contextual<'r, Submit<'r>>>, config: &Config) -> (Statu
             let file_path: &std::path::Path = submission.submission.file.path().unwrap();
 
             let mut p = config.temp_dir.clone().relative();
+            p.push(submission.submission.project);
+            p.push(submission.submission.gate);
             // already exists -> simply show success
-            if std::path::Path::new(&p.join(submission.submission.project).join(&file_name_with_extension)).is_file() {
+            if std::path::Path::new(&p.join(&file_name_with_extension)).is_file() {
                 Template::render("success", &form.context)
             } else {
                 println!("submission: {:#?}", submission);
-                p.push(submission.submission.project);
                 std::fs::create_dir_all(p.clone()).expect("upload dir created");
                 p.push(file_name_with_extension);
                 println!(
