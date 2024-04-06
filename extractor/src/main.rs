@@ -13,7 +13,7 @@ use log::LevelFilter;
 use log::{debug, error, info};
 use notify::EventKind;
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Result, Watcher};
-use std::{io::Write, path::{PathBuf, self}};
+use std::{io::Write, path::PathBuf};
 use std::{path::Path, process::Command};
 
 fn main() {
@@ -99,9 +99,9 @@ fn on_change(extractor: &Extractor, res: Result<notify::Event>) {
                     // zip inside folder?
                     let folder_path = file_path.parent().unwrap().to_str().expect("failed to turn path into str").to_owned();
                     let glob_pattern = folder_path + "/**/*.zip";
-                    let mut newZip = true;
-                    while newZip {
-                        newZip = false;
+                    let mut new_zip = true;
+                    while new_zip {
+                        new_zip = false;
                         for entry in glob(&glob_pattern).expect("Failed to read glob pattern") {
                             match entry {
                                 Ok(path) => {
@@ -116,7 +116,7 @@ fn on_change(extractor: &Extractor, res: Result<notify::Event>) {
                                     };
                                     // zip inside zip -> redo extract
                                     if extractor.extract(&path, target_path) {
-                                        newZip = true;
+                                        new_zip = true;
                                     } else {
                                         error!("invalid zip");
                                     }
