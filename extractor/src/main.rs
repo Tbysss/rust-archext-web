@@ -12,27 +12,28 @@ use glob::glob;
 use log::LevelFilter;
 use log::{debug, error, info};
 use notify::EventKind;
-use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Result, Watcher};
+use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use std::{io::Write, path::PathBuf};
 use std::{path::Path, process::Command};
 
 fn main() {
     let mut builder = Builder::new();
     builder.format(|buf, record| {
-            writeln!(
-                buf,
-                "{} [{}] - {}",
-                Local::now().format("%Y-%m-%dT%H:%M:%S"),
-                record.level(),
-                record.args()
-            )
-        });
+        writeln!(
+            buf,
+            "{} [{}] - {}",
+            Local::now().format("%Y-%m-%dT%H:%M:%S"),
+            record.level(),
+            record.args()
+        )
+    });
     builder.filter_level(LevelFilter::Off);
-    let env = env_logger::Env::new().filter_or("LOG_LEVEL", "info").write_style_or("LOG_STYLE", "always");
+    let env = env_logger::Env::new()
+        .filter_or("LOG_LEVEL", "info")
+        .write_style_or("LOG_STYLE", "always");
     builder.parse_env(env);
     builder.target(env_logger::Target::Stdout);
     builder.init();
-    
 
     let path = std::env::args()
         .nth(1)
@@ -88,16 +89,24 @@ async fn async_watch<P: AsRef<Path>>(path: P, extractor: &Extractor) -> notify::
     Ok(())
 }
 
-fn on_change(extractor: &Extractor, res: Result<notify::Event>) {
+fn on_change(extractor: &Extractor, res: notify::Result<notify::Event>) {
     match res {
         Ok(event) => {
             debug!("event: {:?}", event);
             let file_path = &event.paths[0];
             if event.kind.is_modify() {
-                if event.kind == EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::From))
-                {                  
+                if event.kind
+                    == EventKind::Modify(notify::event::ModifyKind::Name(
+                        notify::event::RenameMode::From,
+                    ))
+                {
                     // zip inside folder?
-                    let folder_path = file_path.parent().unwrap().to_str().expect("failed to turn path into str").to_owned();
+                    let folder_path = file_path
+                        .parent()
+                        .unwrap()
+                        .to_str()
+                        .expect("failed to turn path into str")
+                        .to_owned();
                     let glob_pattern = folder_path + "/**/*.zip";
                     let mut new_zip = true;
                     while new_zip {
@@ -106,8 +115,9 @@ fn on_change(extractor: &Extractor, res: Result<notify::Event>) {
                             match entry {
                                 Ok(path) => {
                                     info!("found a zip inside folder: {:?}", path);
-                                    
-                                    let full_path = std::fs::canonicalize(&extractor.target_path).expect("failed to canonicalize path");
+
+                                    let full_path = std::fs::canonicalize(&extractor.target_path)
+                                        .expect("failed to canonicalize path");
                                     let target_path = if path.starts_with(full_path) {
                                         // target is source -> reclaim structure
                                         path.parent()
@@ -115,12 +125,20 @@ fn on_change(extractor: &Extractor, res: Result<notify::Event>) {
                                         None
                                     };
                                     // zip inside zip -> redo extract
-                                    if extractor.extract(&path, target_path) {
-                                        new_zip = true;
-                                    } else {
-                                        error!("invalid zip");
+                                    let extract_result = extractor.extract(&path, target_path);
+                                    match extract_result {
+                                        Ok(extracted_new_zip) => {
+                                            new_zip = extracted_new_zip;
+                                        }
+                                        Err(msg) => {
+                                            error!("{}", msg);
+                                            new_zip = false;
+                                        }
                                     }
-                                    archive(extractor, &path);
+
+                                    if let Err(_err) = archive(extractor, &path) {
+                                        println!("Failed to archive!")
+                                    }
                                 }
                                 Err(e) => println!("{:?}", e),
                             }
@@ -133,14 +151,18 @@ fn on_change(extractor: &Extractor, res: Result<notify::Event>) {
     }
 }
 
-fn archive(extractor: &Extractor, file_path: &PathBuf) {
+fn archive(extractor: &Extractor, file_path: &PathBuf) -> Result<(), String> {
     let mut archive_path = PathBuf::new();
     archive_path.push(&extractor.archive_dir);
     archive_path.push(file_path.file_name().unwrap());
     info!("{:?}: archive to {:?}", file_path, archive_path);
-    Command::new("mv")
+    let status = Command::new("mv")
         .arg(file_path.as_os_str())
         .arg(archive_path.as_os_str())
         .status()
-        .expect("failed to archive");
+        .expect("failed to call mv!");
+    if status.success() {
+        return Ok(());
+    }
+    return Err(format!("archive failed - exit-code={:?}", status.code()))
 }

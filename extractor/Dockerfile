@@ -1,10 +1,10 @@
-FROM rust:1.77 as builder
+FROM rust:1.79 AS builder
 
 ADD ./ /build
 WORKDIR /build
 RUN cargo build --release
 
-FROM debian:stable-slim as runner
+FROM debian:stable-slim AS runner
 
 COPY --from=builder /build/target/release/log-preperation /bin/log-preperation
 RUN useradd -u 1000 app

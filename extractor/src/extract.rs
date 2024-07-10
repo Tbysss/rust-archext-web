@@ -18,11 +18,11 @@ impl Extractor {
 }
 
 pub trait Extract {
-    fn extract(&self, file_path: &PathBuf, target_path: Option<&Path>) -> bool;
+    fn extract(&self, file_path: &PathBuf, target_path: Option<&Path>) -> Result<bool, String>;
 }
 
 impl Extract for Extractor {
-    fn extract(&self, file_path: &PathBuf, target_path: Option<&Path>) -> bool {
+    fn extract(&self, file_path: &PathBuf, target_path: Option<&Path>) -> Result<bool, String> {
         let t = target_path
             .unwrap_or_else(|| &self.target_path)
             .canonicalize()
@@ -36,33 +36,36 @@ impl Extract for Extractor {
                     name,
                     file_path.extension()
                 );
-                return false;
+                return Ok(false);
             }
             if let Some(ext) = file_path.extension() {
                 if ext != "zip" {
                     log::warn!("{:?}: invalid file type - ignore {:?}", name, ext);
-                    return false;
+                    return Ok(false);
                 }
             }
-            if let Some(file_name) = file_path.file_name() {
+            return if let Some(file_name) = file_path.file_name() {
                 log::info!("file '{:?}' written - running next steps", file_name);
                 let file = File::open(file_path).expect("failed to open file");
-                let mut archive = zip::ZipArchive::new(file).expect("failed to create zip archive");
-                let res = archive.extract(t);
+                let archive = zip::ZipArchive::new(file);
+                if archive.is_err() {
+                    return Err(archive.err().unwrap().to_string())
+                }
+                let res = archive.unwrap().extract(t);
                 match res {
                     Ok(_) => {
                         log::info!("{:?}: archive extracted!", name);
-                        return true;
+                        Ok(true)
                     }
                     Err(e) => {
                         log::error!("{:?}: failed to extract archive: {}", name, e);
-                        return false;
+                        Ok(false)
                     }
                 }
             } else {
-                return false;
+                Err("invalid file".to_string())
             }
         }
-        return false;
+        return Err("invalid file path".to_string());
     }
 }
