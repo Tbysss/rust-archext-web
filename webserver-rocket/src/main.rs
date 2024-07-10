@@ -33,9 +33,17 @@ fn accept_content_types<'v>(file: &TempFile<'_>) -> Result<(), Errors<'v>> {
         }
     }
 
-    let msg = match (file.content_type().and_then(|c| c.extension()), seven_z.extension(), zip.extension()) {
-        (Some(a), Some(b), Some(c)) => format!("invalid file type: .{}, must be .{} or .{}", a, b, c),
-        (Some(a), None, None) => format!("invalid file type: .{}, must be {} or {}", a, seven_z, zip),
+    let msg = match (
+        file.content_type().and_then(|c| c.extension()),
+        seven_z.extension(),
+        zip.extension(),
+    ) {
+        (Some(a), Some(b), Some(c)) => {
+            format!("invalid file type: .{}, must be .{} or .{}", a, b, c)
+        }
+        (Some(a), None, None) => {
+            format!("invalid file type: .{}, must be {} or {}", a, seven_z, zip)
+        }
         _ => format!("file type must be .{} or .{}", "7z", "zip"),
     };
 
