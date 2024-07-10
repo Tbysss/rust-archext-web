@@ -8,7 +8,6 @@ use futures::{
     channel::mpsc::{channel, Receiver},
     SinkExt, StreamExt,
 };
-use glob::glob;
 use log::LevelFilter;
 use log::{debug, error, info};
 use notify::EventKind;
@@ -107,13 +106,15 @@ fn on_change(extractor: &Extractor, res: notify::Result<notify::Event>) {
                         .to_str()
                         .expect("failed to turn path into str")
                         .to_owned();
-                    let glob_pattern = folder_path + "/**/*.zip";
+                    let glob_pattern = folder_path + "/**/*.{zip,7z}";
                     let mut new_zip = true;
                     while new_zip {
                         new_zip = false;
-                        for entry in glob(&glob_pattern).expect("Failed to read glob pattern") {
+                        for entry in globwalk::glob(glob_pattern.as_str()).unwrap()
+                        {
                             match entry {
-                                Ok(path) => {
+                                Ok(dir) => {
+                                    let path = dir.into_path();
                                     info!("found a zip inside folder: {:?}", path);
 
                                     let full_path = std::fs::canonicalize(&extractor.target_path)
@@ -164,5 +165,5 @@ fn archive(extractor: &Extractor, file_path: &PathBuf) -> Result<(), String> {
     if status.success() {
         return Ok(());
     }
-    return Err(format!("archive failed - exit-code={:?}", status.code()))
+    return Err(format!("archive failed - exit-code={:?}", status.code()));
 }
