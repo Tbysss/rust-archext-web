@@ -1,11 +1,11 @@
-FROM rust:1.77 as builder
+FROM rust:1.79 AS builder
 
 ADD ./src /app/src
 ADD ./Cargo.toml /app/Cargo.toml
 WORKDIR /app
 RUN cargo build --release
 
-FROM debian:stable-slim as runner
+FROM debian:stable-slim AS runner
 
 COPY --from=builder /app/target/release/webserver-rocket /app/webserver
 ADD ./static /app/static

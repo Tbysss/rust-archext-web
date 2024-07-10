@@ -3,6 +3,7 @@ limits.data-form = "4GiB"
 limits.file = "4GiB"
 template_dir = "templates/"
 temp_dir = "data"
+log_level = "normal"
 
 [release]
 temp_dir = "/data"

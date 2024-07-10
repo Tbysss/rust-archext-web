@@ -20,7 +20,7 @@
     <div class="container">
       <h1>File Upload</h1>
 
-      {% if errors | length > 1 %}
+      {% if errors | length > 0 %}
           <small class="text-error" style="margin-top: -20px">
               {{ errors | length }} field(s) have errors
           </small>
@@ -59,6 +59,25 @@
         <br />
         <input id="upload-submit" type="submit" value="Upload" class="is-full-width" />
       </form>
+
+      <div class="container">
+
+        {% if errors | length > 0 %}
+            <h1>Failed!</h1>
+        {%endif%}
+        {% if values | length > 0 %}
+        {% if errors | length == 0 %}
+            <h1>Success!</h1>
+        {%endif%}
+            <h3>Submission Data</h3>
+
+            <ul>
+            {% for key, value in values %}
+                <li><strong>{{ key }}</strong> - {{ value }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
     </div>
   </body>
 </html>
