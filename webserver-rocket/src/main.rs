@@ -12,7 +12,6 @@ use rocket_dyn_templates::Template;
 struct Submission<'v> {
     #[field(validate = len(1..).or_else(msg!("project required")))]
     project: &'v str,
-    #[field(validate = len(1..).or_else(msg!("gate required")))]
     gate: &'v str,
     #[field(validate = accept_content_types())]
     file: TempFile<'v>,
@@ -74,7 +73,9 @@ fn submit<'r>(form: Form<Contextual<'r, Submit<'r>>>, config: &Config) -> (Statu
 
             let mut p = config.temp_dir.clone().relative();
             p.push(submission.submission.project);
-            p.push(submission.submission.gate);
+            if !submission.submission.gate.is_empty() {
+                p.push(submission.submission.gate);
+            }
             // already exists -> simply show success
             if !std::path::Path::new(&p.join(&file_name_with_extension)).is_file() {
                 println!("submission: {:#?}", submission);

@@ -26,12 +26,16 @@ pub trait Extract {
 impl Extract for Extractor {
     fn extract(&self, file_path: &PathBuf, target_path: Option<&Path>) -> Result<bool, String> {
         let mut ext = "";
-        let t = target_path
+        let tmp = target_path
             .unwrap_or_else(|| &self.target_path)
             .canonicalize()
             .expect("failed to canonicalize target path")
             .join(file_path.file_stem().unwrap());
-        log::info!("trying to extract '{:?}' to '{:?}'", file_path, t);
+        let target_path_string = tmp.to_str().unwrap().to_string()
+            .replace(".", "_");
+        let target_path_buf = Path::new(&target_path_string);
+
+        log::info!("trying to extract '{:?}' to '{:?}'", file_path, target_path_buf);
         if let Some(name) = file_path.file_stem() {
             if file_path.extension().is_none() {
                 log::warn!(
@@ -58,7 +62,7 @@ impl Extract for Extractor {
                     if archive.is_err() {
                         return Err(archive.err().unwrap().to_string());
                     }
-                    res = archive.unwrap().extract(t).or_else(|e| match e {
+                    res = archive.unwrap().extract(target_path_buf).or_else(|e| match e {
                         ZipError::Io(_) => Err("Io".to_string()),
                         ZipError::InvalidArchive(_) => Err("InvalidArchive".to_string()),
                         ZipError::UnsupportedArchive(_) => Err("UnsupportedArchive".to_string()),
@@ -67,7 +71,7 @@ impl Extract for Extractor {
                         _ => Err("Unknown".to_string()),
                     })
                 } else if ext == "7z" {
-                    res = sevenz_rust::decompress(file, t).or_else(|e| match e {
+                    res = sevenz_rust::decompress(file, target_path_buf).or_else(|e| match e {
                         Error::BadSignature(_) => Err("BadSignature".to_string()),
                         Error::UnsupportedVersion { .. } => Err("UnsupportedVersion".to_string()),
                         Error::ChecksumVerificationFailed => {
