@@ -1,0 +1,1 @@
+This is just a playground to find out how rust works.
