@@ -33,11 +33,11 @@
 
           <div class="row">
             <div class="col">
-            {{ m::input(label="Project / Location", type="text", name="submission.project") }}
+            {{ m::input(label="Primary Label", type="text", name="submission.primary") }}
               <!-- required -->
             </div>
             <div class="col">
-            {{ m::input(label="Gate", type="text", name="submission.gate") }}
+            {{ m::input(label="Secondary Label", type="text", name="submission.secondary") }}
               <!-- required -->
             </div>
           </div>
